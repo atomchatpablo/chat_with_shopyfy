@@ -154,38 +154,42 @@ def obtener_base_url(url):
 
 
 
-def save_bigquery(raw_data, project_id, dataset_id, cred_path):
+def save_bigquery(raw_data, project_id, dataset_id, cred_path, table_id=None):
     try:
         if not raw_data:
             print("⚠️ No hay datos para guardar.")
-            return False
+            return False, None
 
         client = bigquery.Client.from_service_account_json(cred_path)
 
-        # Armar nombre de tabla dinámica
-        today = datetime.datetime.now().strftime('%Y%m%d')
-        sample_url = raw_data[0].get("url_ref", "https://default.com")
-        domain = urlparse(sample_url).netloc.replace("www.", "").split(".")[0]
-        table_name = f"{today}_{domain}"
-        table_id = f"{project_id}.{dataset_id}.{table_name}"
+        # 👉 Armar nombre de tabla dinámica si no se pasa una explícita
+        if table_id is None:
+            today = datetime.datetime.now().strftime('%Y%m%d')
+            sample_url = raw_data[0].get("url_ref") or raw_data[0].get("url", "https://default.com")
+            domain = urlparse(sample_url).netloc.replace("www.", "").split(".")[0]
+            table_name = f"{today}_{domain}"
+        else:
+            table_name = table_id
+
+        full_table_id = f"{project_id}.{dataset_id}.{table_name}"
 
         # Verificar si la tabla ya existe
         table_exists = True
         try:
-            client.get_table(table_id)
+            client.get_table(full_table_id)
         except:
             table_exists = False
 
         # Crear tabla si no existe
         if not table_exists:
             schema = infer_schema_from_json(raw_data[0])
-            table = bigquery.Table(table_id, schema=schema)
+            table = bigquery.Table(full_table_id, schema=schema)
             client.create_table(table)
-            print(f"📄 Tabla creada: {table_id}")
+            print(f"📄 Tabla creada: {full_table_id}")
 
         # Insertar los datos
         errors = client.insert_rows_json(
-            table=table_id,
+            table=full_table_id,
             json_rows=raw_data,
             row_ids=[None] * len(raw_data),
         )
@@ -194,8 +198,8 @@ def save_bigquery(raw_data, project_id, dataset_id, cred_path):
             print("❌ Errores al insertar:", errors)
             return False, None
 
-        print(f"✅ Se insertaron {len(raw_data)} registros en {table_id}")
-        return True, table_id
+        print(f"✅ Se insertaron {len(raw_data)} registros en {full_table_id}")
+        return True, full_table_id
 
     except Exception as e:
         print("❌ Error general en save_bigquery:", e)
@@ -204,12 +208,15 @@ def save_bigquery(raw_data, project_id, dataset_id, cred_path):
 
 
 def obtener_datos_bigquery(project_id, dataset_id, table_id, cred_path):
+    print("pasa query")
     try:
         client = bigquery.Client.from_service_account_json(cred_path)
         query = f"SELECT * FROM `{project_id}.{dataset_id}.{table_id}`"
+        print("query: ", query)
         query_job = client.query(query)
         results = query_job.result()
         records = [dict(row.items()) for row in results]
         return json.dumps(records)
     except Exception as e:
+        print("no pasa query")
         return json.dumps({"error": str(e)})

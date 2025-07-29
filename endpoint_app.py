@@ -35,6 +35,7 @@ def chat():
     project_id = data.get('project_id')
     dataset_id = data.get('dataset_id')
     table_id = data.get('table_id')
+    print("table_id: ", table_id)
 
     historial = data.get('history_chat', [])  # puede venir vacío
 
@@ -45,21 +46,26 @@ def chat():
         genai.configure(api_key=GOOGLE_API_KEY)
 
         def get_bigquery_data():
+            print("pasa 0")
             return obtener_datos_bigquery(project_id, dataset_id, table_id, SERVICE_ACCOUNT_FILE)
-
+        print("pasa 1")
         model = genai.GenerativeModel(
             model_name='gemini-2.5-flash',
             tools=[get_bigquery_data],
             system_instruction=system_prompt
         )
+        print("pasa 2: ", system_prompt)
 
         # reconstruir sesión con historial
         chat_session = model.start_chat(
             history=historial,
             enable_automatic_function_calling=True
         )
+        print("pasa 3")
 
         response = chat_session.send_message(mensaje)
+
+        print("pasa 4")
 
         return jsonify({
             'response': response.text,
@@ -195,7 +201,70 @@ def shopify_to_bigquery():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@app.route("/autoland-to-bigquery", methods=["POST"])
+def autoland_to_bigquery():
+    data = request.get_json()
+    project_id = data.get("project_id")
+    dataset_id = data.get("dataset_id")
+    cred_path = data.get("cred_path")
+
+    if not all([project_id, dataset_id, cred_path]):
+        return jsonify({"error": "Faltan parámetros"}), 400
+
+    try:
+        url = "https://www.autoland.com.co/wp-json/vehiculosWhatsapp/v1/usados"
+        body = {
+            "precio_min": 0,
+            "precio_max": 25000000000
+        }
+
+        headers = {
+            "Content-Type": "application/json"
+        }
+
+        response = requests.post(url, headers=headers, json=body)
+
+        if response.status_code != 200:
+            return jsonify({"error": "Error al consultar Autoland", "details": response.text}), 500
+
+        data_autos = response.json()
+        autos_raw = data_autos.get("autos", [])
+
+        autos = []
+        for auto in autos_raw:
+            item = {
+                "vehicle_id": auto.get("vehicle_id"),
+                "title": auto.get("title"),
+                "make": auto.get("make"),
+                "year": auto.get("year"),
+                "price": auto.get("price"),
+                "sale_price": auto.get("sale_price"),
+                "mileage": auto.get("mileage"),
+                "transmission": auto.get("transmission"),
+                "cilindraje": auto.get("cilindraje"),
+                "url": auto.get("url"),
+                "image_link": auto.get("image_link"),
+                "serie": auto.get("serie"),
+                "type": auto.get("type"),
+                "city": auto.get("city"),
+            }
+            autos.append(item)
+
+        table_id = "20250729_autoland"
+        success, table_name = save_bigquery(autos, project_id, dataset_id, cred_path, table_id=table_id)
+
+        if not success:
+            return jsonify({"error": "Error al subir a BigQuery"}), 500
+
+        return jsonify({
+            "message": f"✅ Subidos {len(autos)} autos a BigQuery",
+            "table_id": table_name
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 5500))
     app.run(host="0.0.0.0", port=port, debug=True)

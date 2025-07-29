@@ -21,7 +21,7 @@
     border-radius: 10px;
     padding: 20px;
     max-width: 800px;
-    height: 700px; /* Altura fija */
+    height: 500px; /* Altura fija */
     overflow-y: auto; /* Scroll vertical */
     margin: 0 auto 20px auto;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -109,9 +109,29 @@
 </head>
 <body>
 
-  <h2>💬 Chat con Shopify</h2>
-<div id="chatbox"></div>
+  <h2>💬 Chat con BigQuery</h2>
+  <div style="max-width: 800px; margin: 0 auto 10px auto;">
+    <label for="tabla-selector"><strong>🗃️ Seleccionar tabla de BigQuery:</strong></label>
+    <select id="tabla-selector" style="width: 100%; padding: 10px; border-radius: 10px; margin-top: 5px;">
+      <option value="20250728_jepwe7-10">Shopify Store</option>
+      <option value="20250729_autoland">Autoland</option>
+    </select>
+  </div>
+  <div style="max-width: 800px; margin: 10px auto;">
 
+    <label for="prompt-selector"><strong>🧠 Seleccionar prompt del sistema:</strong></label>
+    <select id="prompt-selector" style="width: 100%; padding: 10px; border-radius: 10px; margin-top: 5px;">
+      <option value="Respondé como un vendedor experto por WhatsApp. Usá emojis y mantené las respuestas cortas, claras y útiles (máx. 100 palabras). Si te preguntan por un producto, usá get_bigquery_data para buscar la info. Mostrá los datos más relevantes:  📝 nombre  💲 precio  📄 descripción corta  🎨 variantes (si hay)  📸 imagen (si hay)  🔗 link directo al productoSi encontrás más de 3 resultados, mostrá solo los 3 más relevantes y decí:   👉 “Hay más opciones disponibles, ¿querés que te ayude a encontrar la ideal? 😉” Nada de texto largo. WhatsApp es directo y visual. Si tienes una url de la imagen, entregala como parte de la respuesta (por lo general se encuentra en la columna image_link) Si no tienes una respuesta especifica a la pregunta del usuario, porque no pudiste encontrar la respuesta, disculpate y pregunta si puedes ayudarlo con algo mas">
+        Prompt - Productos Shopify
+      </option>
+      <option value="Actuá como un vendedor experto en autos usados para WhatsApp. Usá emojis, mantené las respuestas breves, claras y útiles. Cuando te pregunten por un auto, usá get_bigquery_data para buscar info relevante. Mostrá siempre los datos clave: **marca, modelo, precio** y un 🔗 link al vehículo. Si encontrás más de 3 opciones, respondé con las 3 más relevantes y agregá algo como:   👉 “Hay muchas más opciones disponibles. Si querés, te puedo ayudar a elegir la ideal 🚗😉” Evitá textos largos. ¡Que se entienda rápido! Si no tienes una respuesta especifica a la pregunta del usuario, porque no pudiste encontrar la respuesta, disculpate y pregunta si puedes ayudarlo con algo mas">
+        Prompt - Autos Usados Autoland
+      </option>
+    </select>
+  </div>
+
+
+<div id="chatbox"></div>
 <div id="input-area">
   <input id="msg" placeholder="Escribí tu mensaje" />
   <button onclick="enviarMensaje()">Enviar</button>
@@ -176,49 +196,48 @@ function renderBotMessageWithImages(content) {
   document.getElementById("chatbox").appendChild(messageDiv);
 }
 
-  function enviarMensaje() {
-    const input = document.getElementById("msg");
-    const mensaje = input.value.trim();
-    if (!mensaje) return;
+function enviarMensaje() {
+  const input = document.getElementById("msg");
+  const mensaje = input.value.trim();
+  const tableId = document.getElementById("tabla-selector").value;
 
-    // Limpiar y enfocar
-    input.value = "";
-    input.focus();
+  if (!mensaje) return;
 
-    const now = new Date().toLocaleTimeString("es-AR", { hour12: false });
-    document.getElementById("chatbox").innerHTML += `
-      <div class="msg user">
-        <div class="bubble">
-          🙋‍♂️ ${mensaje}
-          <div class="timestamp">${now}</div>
-        </div>
-      </div>`;
+  input.value = "";
+  input.focus();
 
-    fetch("/chat_with_db", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: mensaje,
-        project_id: "atom-ai-labs-ad1fa",
-        dataset_id: "chat_with_web",
-        table_id: "20250728_jepwe7-10",
-        history_chat: chat_history,
-        system_prompt:
-          "Ayuda respondiendo las consultas del cliente. puedes consultar get_bigquery_data por si te preguntan por un producto en particular. tus respuestas deben tener maximo 100 palabras. Ofrece imagenes, precio, descripciones y variantes si tienes.",
-      }),
+  const now = new Date().toLocaleTimeString("es-AR", { hour12: false });
+  document.getElementById("chatbox").innerHTML += `
+    <div class="msg user">
+      <div class="bubble">
+        ${mensaje}
+        <div class="timestamp">${now}</div>
+      </div>
+    </div>`;
+
+  fetch("/chat_with_db", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message: mensaje,
+      project_id: "atom-ai-labs-ad1fa",
+      dataset_id: "chat_with_web",
+      table_id: tableId,
+      history_chat: chat_history,
+      system_prompt: document.getElementById("prompt-selector").value,
+    }),
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      chat_history.push({ role: "user", parts: [mensaje] });
+      chat_history.push({ role: "model", parts: [data.response] });
+
+      renderBotMessageWithImages(data.response);
+      const chatbox = document.getElementById("chatbox");
+      chatbox.scrollTop = chatbox.scrollHeight;
     })
-      .then((res) => res.json())
-      .then((data) => {
-        chat_history.push({ role: "user", parts: [mensaje] });
-        chat_history.push({ role: "model", parts: [data.response] });
-
-        renderBotMessageWithImages(data.response);
-        const chatbox = document.getElementById("chatbox");
-        chatbox.scrollTop = chatbox.scrollHeight;
-
-      })
-      .catch((err) => console.error("Error:", err));
-  }
+    .catch((err) => console.error("Error:", err));
+}
 
   // Escucha tecla Enter
   document.getElementById("msg").addEventListener("keydown", function (e) {
