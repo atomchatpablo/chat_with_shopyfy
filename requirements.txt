@@ -8,3 +8,4 @@ google-genai
 gspread 
 oauth2client
 google-cloud-bigquery
+flask
