@@ -16,7 +16,7 @@ python-dotenv==1.1.1
 
 # Otras dependencias necesarias según tu código y ecosistema
 openai==1.97.0
-pinecone-client==3.0.0  # 👈 o la versión más reciente válida
+pinecone-client
 tavily-python==0.7.9
 tiktoken==0.9.0
 streamlit==1.46.1
