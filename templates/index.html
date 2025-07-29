@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>💬 Chat con Gemini</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f1f1f1;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+
+    #chatbox {
+    background-color: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    max-width: 800px;
+    height: 700px; /* Altura fija */
+    overflow-y: auto; /* Scroll vertical */
+    margin: 0 auto 20px auto;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .msg {
+      margin-bottom: 15px;
+      line-height: 1.5;
+    }
+
+    .user {
+      text-align: right;
+      color: #1a73e8;
+    }
+
+    .bot {
+      text-align: left;
+      color: #111;
+    }
+
+    .bubble {
+      background-color: #e0e7ff;
+      display: inline-block;
+      padding: 10px 15px;
+      border-radius: 15px;
+      max-width: 70%;
+    }
+
+    .user .bubble {
+      background-color: #cce5ff;
+    }
+
+    .bot img {
+      max-width: 100%;
+      height: auto;
+      margin-top: 10px;
+      border-radius: 10px;
+    }
+    .timestamp {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+      text-align: right;
+    }
+
+    #input-area {
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 10px;
+    }
+
+    input {
+    flex: 1;
+    padding: 12px 15px;
+    font-size: 16px;
+    border: 2px solid #4a90e2;
+    border-radius: 10px;
+    }
+
+    button {
+    padding: 12px 25px;
+    font-size: 16px;
+    border: none;
+    background-color: #4CAF50;
+    color: white;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+    .message-image {
+    max-width: 500px;
+    max-height: 500px;
+    border-radius: 10px;
+    margin-top: 10px;
+    display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>💬 Chat con Shopify</h2>
+<div id="chatbox"></div>
+
+<div id="input-area">
+  <input id="msg" placeholder="Escribí tu mensaje" />
+  <button onclick="enviarMensaje()">Enviar</button>
+</div>
+
+<script>
+  let chat_history = [];
+
+  function renderMarkdown(text) {
+    return text
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\!(.*?)\((.*?)\)/g, "<img src='$2' alt='$1' class='message-image' />")
+      .replace(/\[(.*?)\]\((.*?)\)/g, "<a href='$2' target='_blank'>$1</a>")
+      .replace(/\n/g, "<br>");
+  }
+
+function renderBotMessageWithImages(content) {
+  const messageDiv = document.createElement("div");
+  messageDiv.className = "msg bot";
+
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+
+  const imageRegex = /(https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif)(?:\?[^\s]*)?)/gi;
+  const matches = [...content.matchAll(imageRegex)].map(m => m[0]);
+
+  let lastIndex = 0;
+  matches.forEach((url) => {
+    const index = content.indexOf(url, lastIndex);
+
+    // Agrega el texto previo como HTML (convertido con renderMarkdown)
+    if (index > lastIndex) {
+      const text = content.slice(lastIndex, index);
+      const span = document.createElement("span");
+      span.innerHTML = renderMarkdown(text);
+      bubble.appendChild(span);
+    }
+
+    // Agrega la imagen
+    const img = document.createElement("img");
+    img.src = url;
+    img.className = "message-image";
+    bubble.appendChild(img);
+
+    lastIndex = index + url.length;
+  });
+
+  // Agrega el texto final que quedó después de la última imagen (si lo hay)
+  const finalText = content.slice(lastIndex);
+  if (finalText.trim()) {
+    const span = document.createElement("span");
+    span.innerHTML = renderMarkdown(finalText);
+    bubble.appendChild(span);
+  }
+
+  messageDiv.appendChild(bubble);
+  const now = new Date().toLocaleTimeString("es-AR", { hour12: false });
+  const timestampDiv = document.createElement("div");
+  timestampDiv.className = "timestamp";
+  timestampDiv.innerText = now;
+  bubble.appendChild(timestampDiv);
+  document.getElementById("chatbox").appendChild(messageDiv);
+}
+
+  function enviarMensaje() {
+    const input = document.getElementById("msg");
+    const mensaje = input.value.trim();
+    if (!mensaje) return;
+
+    // Limpiar y enfocar
+    input.value = "";
+    input.focus();
+
+    const now = new Date().toLocaleTimeString("es-AR", { hour12: false });
+    document.getElementById("chatbox").innerHTML += `
+      <div class="msg user">
+        <div class="bubble">
+          🙋‍♂️ ${mensaje}
+          <div class="timestamp">${now}</div>
+        </div>
+      </div>`;
+
+    fetch("http://127.0.0.1:5500/chat_with_db", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: mensaje,
+        project_id: "atom-ai-labs-ad1fa",
+        dataset_id: "chat_with_web",
+        table_id: "20250728_jepwe7-10",
+        history_chat: chat_history,
+        system_prompt:
+          "Ayuda respondiendo las consultas del cliente. puedes consultar get_bigquery_data por si te preguntan por un producto en particular. tus respuestas deben tener maximo 100 palabras. Ofrece imagenes, precio, descripciones y variantes si tienes.",
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        chat_history.push({ role: "user", parts: [mensaje] });
+        chat_history.push({ role: "model", parts: [data.response] });
+
+        renderBotMessageWithImages(data.response);
+        const chatbox = document.getElementById("chatbox");
+        chatbox.scrollTop = chatbox.scrollHeight;
+
+      })
+      .catch((err) => console.error("Error:", err));
+  }
+
+  // Escucha tecla Enter
+  document.getElementById("msg").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault(); // Evita salto de línea
+      enviarMensaje();
+    }
+  });
+</script>
+</body>
+</html>
