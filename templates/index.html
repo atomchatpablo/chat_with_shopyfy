@@ -194,7 +194,7 @@ function renderBotMessageWithImages(content) {
         </div>
       </div>`;
 
-    fetch("http://127.0.0.1:5500/chat_with_db", {
+    fetch("/chat_with_db", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
