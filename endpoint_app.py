@@ -13,8 +13,8 @@ from flask_cors import CORS
 # Cargar variables de entorno
 load_dotenv()
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
-#SERVICE_ACCOUNT_FILE = "/etc/secrets/atom-ai-labs.json"
-SERVICE_ACCOUNT_FILE = '/Users/pablorosa/Documents/crawler_app/my_agent/atom-ai-labs.json'
+SERVICE_ACCOUNT_FILE = "/etc/secrets/atom-ai-labs.json"
+#SERVICE_ACCOUNT_FILE = '/Users/pablorosa/Documents/crawler_app/my_agent/atom-ai-labs.json'
 TAVILY_API_KEY = os.getenv('TAVILY_API_KEY')
 
 client_tavily, gemini_model = init_clients(TAVILY_API_KEY, GOOGLE_API_KEY)
