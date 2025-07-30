@@ -212,11 +212,10 @@ def obtener_datos_bigquery(project_id, dataset_id, table_id, cred_path):
     try:
         client = bigquery.Client.from_service_account_json(cred_path)
         query = f"SELECT * FROM `{project_id}.{dataset_id}.{table_id}`"
-        print("query: ", query)
         query_job = client.query(query)
         results = query_job.result()
         records = [dict(row.items()) for row in results]
         return json.dumps(records)
     except Exception as e:
         print("no pasa query")
-        return json.dumps({"error": str(e)})
+        return json.dumps({"error": str(e)})()

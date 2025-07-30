@@ -1,3 +1,4 @@
 .env
 venv/
 atom-ai-labs.json
+__pycache__/*

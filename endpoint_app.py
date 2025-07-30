@@ -13,8 +13,8 @@ from flask_cors import CORS
 # Cargar variables de entorno
 load_dotenv()
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
-SERVICE_ACCOUNT_FILE = "/etc/secrets/atom-ai-labs.json"
-#SERVICE_ACCOUNT_FILE = '/Users/pablorosa/Documents/crawler_app/my_agent/atom-ai-labs.json'
+#SERVICE_ACCOUNT_FILE = "/etc/secrets/atom-ai-labs.json"
+SERVICE_ACCOUNT_FILE = '/Users/pablorosa/Documents/crawler_app/my_agent/atom-ai-labs.json'
 TAVILY_API_KEY = os.getenv('TAVILY_API_KEY')
 
 client_tavily, gemini_model = init_clients(TAVILY_API_KEY, GOOGLE_API_KEY)
@@ -35,7 +35,6 @@ def chat():
     project_id = data.get('project_id')
     dataset_id = data.get('dataset_id')
     table_id = data.get('table_id')
-    print("table_id: ", table_id)
 
     historial = data.get('history_chat', [])  # puede venir vacío
 
@@ -46,26 +45,21 @@ def chat():
         genai.configure(api_key=GOOGLE_API_KEY)
 
         def get_bigquery_data():
-            print("pasa 0")
             return obtener_datos_bigquery(project_id, dataset_id, table_id, SERVICE_ACCOUNT_FILE)
-        print("pasa 1")
         model = genai.GenerativeModel(
             model_name='gemini-2.5-flash',
             tools=[get_bigquery_data],
             system_instruction=system_prompt
         )
-        print("pasa 2: ", system_prompt)
 
-        # reconstruir sesión con historial
         chat_session = model.start_chat(
             history=historial,
             enable_automatic_function_calling=True
         )
-        print("pasa 3")
 
         response = chat_session.send_message(mensaje)
 
-        print("pasa 4")
+        print("response: ", response.text)
 
         return jsonify({
             'response': response.text,
