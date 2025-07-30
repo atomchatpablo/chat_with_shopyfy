@@ -59,8 +59,6 @@ def chat():
 
         response = chat_session.send_message(mensaje)
 
-        print("response: ", response.text)
-
         return jsonify({
             'response': response.text,
             'timestamp': datetime.datetime.now().strftime('%H:%M:%S'),
