@@ -59,6 +59,8 @@ def chat():
 
         response = chat_session.send_message(mensaje)
 
+        print("response: ", response.text)
+
         return jsonify({
             'response': response.text,
             'timestamp': datetime.datetime.now().strftime('%H:%M:%S'),
@@ -243,7 +245,7 @@ def autoland_to_bigquery():
             }
             autos.append(item)
 
-        table_id = "20250729_autoland"
+        table_id = "20250730_autoland"
         success, table_name = save_bigquery(autos, project_id, dataset_id, cred_path, table_id=table_id)
 
         if not success:

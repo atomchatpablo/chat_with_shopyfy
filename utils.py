@@ -208,7 +208,6 @@ def save_bigquery(raw_data, project_id, dataset_id, cred_path, table_id=None):
 
 
 def obtener_datos_bigquery(project_id, dataset_id, table_id, cred_path):
-    print("pasa query")
     try:
         client = bigquery.Client.from_service_account_json(cred_path)
         query = f"SELECT * FROM `{project_id}.{dataset_id}.{table_id}`"
