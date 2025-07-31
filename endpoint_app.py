@@ -245,7 +245,7 @@ def autoland_to_bigquery():
             }
             autos.append(item)
 
-        table_id = "20250730_autoland"
+        table_id = "20250731_autoland"
         success, table_name = save_bigquery(autos, project_id, dataset_id, cred_path, table_id=table_id)
 
         if not success:
