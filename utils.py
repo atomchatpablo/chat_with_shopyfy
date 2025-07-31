@@ -209,12 +209,22 @@ def save_bigquery(raw_data, project_id, dataset_id, cred_path, table_id=None):
 
 def obtener_datos_bigquery(project_id, dataset_id, table_id, cred_path):
     try:
+        print("🔐 [BigQuery] Autenticando con credenciales:", cred_path)
         client = bigquery.Client.from_service_account_json(cred_path)
+
         query = f"SELECT * FROM `{project_id}.{dataset_id}.{table_id}`"
+        print("📝 [BigQuery] Ejecutando query:", query)
+
         query_job = client.query(query)
         results = query_job.result()
+
+        print("📦 [BigQuery] Resultados obtenidos, convirtiendo a lista de diccionarios...")
         records = [dict(row.items()) for row in results]
+
+        print(f"✅ [BigQuery] Consulta exitosa. Filas obtenidas: {len(records)}")
         return json.dumps(records)
+
     except Exception as e:
-        print("no pasa query")
-        return json.dumps({"error": str(e)})()
+        print("❌ [BigQuery] Error al ejecutar query:", str(e))
+        return json.dumps({"error": str(e)})
+

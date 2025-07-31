@@ -28,38 +28,59 @@ def hello_world():
 
 @app.route('/chat_with_db', methods=['POST'])
 def chat():
+    print("📥 [chat_with_db] Recibí una request POST")
+    
     data = request.get_json()
+    print("🧾 Datos recibidos:", data)
 
     mensaje = data.get('message')
     system_prompt = data.get('system_prompt')
     project_id = data.get('project_id')
     dataset_id = data.get('dataset_id')
     table_id = data.get('table_id')
-
     historial = data.get('history_chat', [])  # puede venir vacío
 
+    # Validación de campos obligatorios
     if not all([mensaje, system_prompt, project_id, dataset_id, table_id]):
+        print("❌ Faltan campos obligatorios en la request")
         return jsonify({'error': 'Faltan campos obligatorios'}), 400
 
     try:
+        print("🔑 Configurando Generative AI con la API key...")
         genai.configure(api_key=GOOGLE_API_KEY)
 
         def get_bigquery_data():
+            """
+            Obtiene y recupera datos ACTUALIZADOS del inventario de autos desde la base de datos de BigQuery.
+            Utiliza esta herramienta OBLIGATORIAMENTE para CUALQUIER pregunta relacionada con:
+            - Marcas, modelos o versiones de autos.
+            - Precios, costos o valor de los vehículos.
+            - Kilometraje (km), antigüedad o año de los autos.
+            - Comparaciones entre dos o más autos.
+            - Cantidad de autos en stock.
+            - Especificaciones técnicas como motor, color, etc.
+            Esta es la ÚNICA fuente de verdad para datos de inventario de autos.
+            """
+            print("📡 Llamando a función obtener_datos_bigquery()...")
             return obtener_datos_bigquery(project_id, dataset_id, table_id, SERVICE_ACCOUNT_FILE)
+
+        print("🤖 Inicializando modelo Gemini...")
         model = genai.GenerativeModel(
             model_name='gemini-2.5-flash',
             tools=[get_bigquery_data],
             system_instruction=system_prompt
         )
 
+        print("🗨️ Iniciando sesión de chat con historial...")
         chat_session = model.start_chat(
             history=historial,
             enable_automatic_function_calling=True
         )
 
+        print(f"📨 Enviando mensaje: {mensaje}")
         response = chat_session.send_message(mensaje)
 
-        print("response: ", response.text)
+        print("✅ Respuesta recibida del modelo:", response.text)
 
         return jsonify({
             'response': response.text,
@@ -67,7 +88,9 @@ def chat():
         })
 
     except Exception as e:
+        print("🔥 Error durante el procesamiento:", str(e))
         return jsonify({'error': f'Error procesando mensaje: {str(e)}'}), 500
+
 
 @app.route('/chat')
 def home():
